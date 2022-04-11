@@ -13,19 +13,29 @@ pub fn run(old_file: &PathBuf, new_file: &PathBuf, verbose: u8) -> anyhow::Resul
 	println!("Created new temporary directory `{}` to store compilation output", output_dir.path().to_string_lossy());
     }
 
-    match create_bitcodes(&output_dir, old_file, new_file, verbose) {
-	Ok(_) => {},
-	Err(e) => {
-	    output_dir.close()?;
-	    return Err(e);
+    let (old_bc, new_bc) = {
+	match create_bitcodes(&output_dir, old_file, new_file, verbose) {
+	    Ok((bc, rs)) => {
+		(bc, rs)
+	    },
+	    Err(e) => {
+		output_dir.close()?;
+		return Err(e);
+	    }
 	}
+    };
+
+    if verbose >= 2 {
+	println!("Compiled LLVM bitcode files `{}` and '{}'", old_bc.to_string_lossy(), new_bc.to_string_lossy());
     }
     
+    drop(old_bc);
+    drop(new_bc);
     output_dir.close()?;
     Ok(())
 }
 
-pub fn create_bitcodes(output_dir: &TempDir, old_file: &PathBuf, new_file: &PathBuf, _verbose: u8) -> anyhow::Result<()> {
+pub fn create_bitcodes(output_dir: &TempDir, old_file: &PathBuf, new_file: &PathBuf, _verbose: u8) -> anyhow::Result<(PathBuf, PathBuf)> {
 
     let mut old_bc = output_dir.path().to_path_buf();
     old_bc.push("old.bc");
@@ -33,7 +43,7 @@ pub fn create_bitcodes(output_dir: &TempDir, old_file: &PathBuf, new_file: &Path
     let mut new_bc = output_dir.path().to_path_buf();
     new_bc.push("new.bc");
 
-    for (bc, rs) in [(old_bc, old_file), (new_bc, new_file)] {
+    for (bc, rs) in [(&old_bc, old_file), (&new_bc, new_file)] {
 
 	let mut rustc_cmd = Command::new("rustc");
 	rustc_cmd.stdin(Stdio::inherit())
@@ -47,7 +57,7 @@ pub fn create_bitcodes(output_dir: &TempDir, old_file: &PathBuf, new_file: &Path
 	    "debuginfo=1",
 	    "-o",
 	])
-	    .arg(bc.into_os_string())
+	    .arg(bc.as_os_str())
 	    .arg(rs.as_os_str());
 
 	let status = rustc_cmd.status()?;
@@ -57,5 +67,5 @@ pub fn create_bitcodes(output_dir: &TempDir, old_file: &PathBuf, new_file: &Path
 	}
     }
     
-    Ok(())
+    Ok((old_bc, new_bc))
 }
