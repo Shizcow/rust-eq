@@ -3,6 +3,17 @@ name = "rust-eq"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+anyhow = "1.0.56"
+clap = { version = "3.1.8", features = ["derive"] }
+tempfile = "3"
+haybale = { git = "https://github.com/Shizcow/haybale" }
+
+[features]
+# Passthroughs to haybale
+llvm-9 = ["haybale/llvm-9"]
+llvm-10 = ["haybale/llvm-10"]
+llvm-11 = ["haybale/llvm-11"]
+llvm-12 = ["haybale/llvm-12"]
+llvm-13 = ["haybale/llvm-13"]
+vendor-boolector = ["haybale/vendor-boolector"]
