@@ -150,13 +150,7 @@ fn analyze_fn(old_project: &Project, new_project: &Project, oldfn_name: &str, ne
     let oldvals = get_rvals(&mut old_em)?;
 
     for old_bvalret in &oldvals {
-	if verbose >= 1 {
-	    println!("Solving equivalence for {:?}", old_bvalret);
-	}
 	let found_equivalence = newvals.iter().map(|new_bvalret| {
-	    if verbose >= 2 {
-		println!("  Against {:?}", new_bvalret);
-	    }
 	    match (&old_bvalret, new_bvalret) {
 		(ReturnValue::Return(old_bv), ReturnValue::Return(new_bv)) => {
 		    let old_solutions = get_bvals(oldfn_name, complexity, old_em.state(), old_bv)?;
@@ -166,7 +160,6 @@ fn analyze_fn(old_project: &Project, new_project: &Project, oldfn_name: &str, ne
 			for new_solution in &new_solutions {
 			    if old_solution != new_solution {
 				continue;
-			    }println!("{:?}", old_solution);
 			    // return values are the same
 			    // but we've yet to check if they are the same for identical inputs
 			    let old_param_bvs: Vec<_> = old_em.param_bvs().clone();
