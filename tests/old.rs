@@ -9,3 +9,12 @@ pub fn foo(x: u32) -> u32 {
 	return 3;
     }
 }
+
+pub mod nested {
+    pub fn bar(x: u32) -> u32 {
+	if x == 0 {
+	    return 0;
+	}
+	panic!("Other");
+    }
+}

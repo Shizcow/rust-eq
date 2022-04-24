@@ -26,6 +26,10 @@ enum Commands {
 	/// Updated implementation to check against
 	#[clap(parse(from_os_str), value_name = "FILE_NEW")]
 	file_new: PathBuf,
+	
+	/// Number of distinct solutions to check for. Larger numbers can evaluate more complex programs, but are slow
+	#[clap(short, long, default_value = "10", value_name = "COMPLEXITY")]
+	complexity: usize,
     }
 }
 
@@ -33,8 +37,8 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::Direct { file_old, file_new } => {
-	    direct::run(file_old, file_new, cli.verbose)?;
+        Commands::Direct { file_old, file_new, complexity } => {
+	    direct::run(file_old, file_new, cli.verbose, *complexity)?;
         }
     }
     
