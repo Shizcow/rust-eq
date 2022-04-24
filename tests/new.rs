@@ -1,6 +1,6 @@
-pub fn foo(x: u32) -> u32 {
-    x%4
-}
+// pub fn foo(x: u8) -> u8 {
+//     x%4
+// }
 
 
 
@@ -11,10 +11,7 @@ pub fn foo(x: u32) -> u32 {
 
 
 pub mod nested {
-    pub fn bar(x: u32) -> u32 {
-	if x == 1 {
-	    return 0;
-	}
-	panic!("Other");
+    pub fn bar(x: u8) -> u8 {
+	x
     }
 }

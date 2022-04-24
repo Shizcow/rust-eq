@@ -1,6 +1,7 @@
 use std::process::Command;
 use std::path::PathBuf;
 use std::process::Stdio;
+use std::collections::HashSet;
 
 use rustc_demangle::try_demangle;
 
@@ -9,6 +10,21 @@ use tempfile::TempDir;
 
 use haybale::Project;
 use haybale::Config;
+
+use haybale::symex_function;
+use haybale::backend::DefaultBackend;
+use haybale::backend::Backend;
+use haybale::ExecutionManager;
+use haybale::ReturnValue;
+use haybale::Error;
+use haybale::State;
+use haybale::solver_utils::PossibleSolutions::*;
+
+use boolector::BVSolution;
+
+use itertools::Itertools;
+
+use llvm_ir::Type;
 
 pub fn run(old_file: &PathBuf, new_file: &PathBuf, verbose: u8, complexity: usize) -> anyhow::Result<()> {
     let output_dir = tempdir()?;
@@ -37,7 +53,7 @@ pub fn run(old_file: &PathBuf, new_file: &PathBuf, verbose: u8, complexity: usiz
 
     for (oldfn_name, newfn_name) in functions_to_analyze {
 	check_preconditions(&old_project, &new_project, &oldfn_name, &newfn_name, verbose)?;
-	analyze_fn(&old_project, &new_project, &oldfn_name, &newfn_name, verbose)?;
+	analyze_fn(&old_project, &new_project, &oldfn_name, &newfn_name, verbose, complexity)?;
     }
     
     output_dir.close()?;
@@ -62,85 +78,134 @@ fn check_preconditions(old_project: &Project, new_project: &Project, oldfn_name:
 	}
     }
 
-    if oldfn.return_type.as_ref() == &llvm_ir::Type::VoidType {
+    if oldfn.return_type.as_ref() == &Type::VoidType {
 	return Err(anyhow::Error::msg(format!("Cannot compare: Function {} returns void (vacuous evaluation)", oldfn_name)));
     }
-    if newfn.return_type.as_ref() == &llvm_ir::Type::VoidType {
+    if newfn.return_type.as_ref() == &Type::VoidType {
 	return Err(anyhow::Error::msg(format!("Cannot compare: Function {} returns void (vacuous evaluation)", newfn_name)));
     }
 
     Ok(())
 }
 
-fn analyze_fn(old_project: &Project, new_project: &Project, oldfn_name: &str, newfn_name: &str, verbose: u8) -> anyhow::Result<()> {
+fn check_rval(project: &Project, em: &ExecutionManager<DefaultBackend>) -> anyhow::Result<u32> {
+    match em.func().return_type.as_ref() {
+        Type::VoidType => {
+            Err(anyhow::Error::msg("Cannot compare: Function has void type")) // checked earlier
+        },
+        ty => {
+            let width = project
+                .size_in_bits(&ty)
+                .expect("Function return type shouldn't be an opaque struct type");
+	    if width == 0 {
+		return Err(anyhow::Error::msg("Cannot compare: Function return type has width 0 bits but isn't void type")); // void type was handled above
+	    }
+	    Ok(width)
+        },
+    }
+}
+
+fn get_rvals(em: &mut ExecutionManager<DefaultBackend>) -> anyhow::Result<Vec<ReturnValue<<DefaultBackend as Backend>::BV>>> {
+    em.map(|bvretval|
+           match bvretval {
+	       Ok(ReturnValue::ReturnVoid) => {
+		   Err(anyhow::Error::msg("Function shouldn't return void"))
+	       },
+	       Ok(v) => {
+		   Ok(v)
+	       },
+	       Err(Error::LoopBoundExceeded(_)) => {
+		   Err(anyhow::Error::msg("Loop bound exceeeded during analysis"))
+	       },
+	       Err(_) => {
+		   Err(anyhow::Error::msg("Symex failure"))
+	       }
+           }).try_collect()
+}
+
+fn get_bvals<'b>(fn_name: &str, complexity: usize, state: &State<'b, DefaultBackend>, bv: &<DefaultBackend as Backend>::BV) -> anyhow::Result<HashSet<BVSolution>> {
+    match state.get_possible_solutions_for_bv(bv, complexity).map_err(|e| anyhow::Error::msg(state.full_error_message_with_context(e)))? {
+	AtLeast(_) => {
+	    Err(anyhow::Error::msg(format!("Function `{}` is too complex to analyze with current --complexity setting", fn_name)))
+	},
+	Exactly(hs) => Ok(hs)
+    }
+}
+
+fn analyze_fn(old_project: &Project, new_project: &Project, oldfn_name: &str, newfn_name: &str, verbose: u8, complexity: usize) -> anyhow::Result<()> {
     if verbose >= 1 {
 	println!("Performing symbolic execution on  `{}` and '{}'", oldfn_name, newfn_name);
     }
-    todo!("");
-    // let mut em: ExecutionManager<DefaultBackend> =
-    //     symex_function(funcname, project, Config::Default(), params).unwrap();
+    
+    let mut old_em: ExecutionManager<DefaultBackend> =
+        symex_function(oldfn_name, old_project, Config::default(), None).unwrap();
+    let mut new_em: ExecutionManager<DefaultBackend> =
+        symex_function(newfn_name, new_project, Config::default(), None).unwrap();
 
-    // let returnwidth = match em.func().return_type.as_ref() {
-    //     Type::VoidType => {
-    //         return Err("find_zero_of_func: function has void type".into());
-    //     },
-    //     ty => {
-    //         let width = project
-    //             .size_in_bits(&ty)
-    //             .expect("Function return type shouldn't be an opaque struct type");
-    //         assert_ne!(width, 0, "Function return type has width 0 bits but isn't void type"); // void type was handled above
-    //         width
-    //     },
-    // };
-    // let zero = em.state().zero(returnwidth);
-    // let mut found = false;
-    // while let Some(bvretval) = em.next() {
-    //     match bvretval {
-    //         Ok(ReturnValue::ReturnVoid) => panic!("Function shouldn't return void"),
-    //         Ok(ReturnValue::Throw(_)) => continue, // we're looking for values that result in _returning_ zero, not _throwing_ zero
-    //         Ok(ReturnValue::Abort) => continue,
-    //         Ok(ReturnValue::Return(bvretval)) => {
-    //             let state = em.mut_state();
-    //             bvretval._eq(&zero).assert();
-    //             if state.sat()? {
-    //                 found = true;
-    //                 break;
-    //             }
-    //         },
-    //         Err(Error::LoopBoundExceeded(_)) => continue, // ignore paths that exceed the loop bound, keep looking
-    //         Err(e) => return Err(em.state().full_error_message_with_context(e)),
-    //     }
-    // }
+    if check_rval(old_project, &old_em)? != check_rval(new_project, &new_em)? {
+	return Err(anyhow::Error::msg("Cannot compare: Return widths differ"));
+    }
 
-    // let param_bvs: Vec<_> = em.param_bvs().clone();
-    // let func = em.func();
-    // let state = em.mut_state();
-    // if found {
-    //     // in this case state.sat() must have passed
-    //     Ok(Some(
-    //         func.parameters
-    //             .iter()
-    //             .zip_eq(param_bvs.iter())
-    //             .map(|(p, bv)| {
-    //                 let param_as_u64 = state
-    //                     .get_a_solution_for_bv(bv)?
-    //                     .expect("since state.sat() passed, expected a solution for each var")
-    //                     .as_u64()
-    //                     .expect("parameter more than 64 bits wide");
-    //                 Ok(match p.ty.as_ref() {
-    //                     Type::IntegerType { bits: 8 } => SolutionValue::I8(param_as_u64 as i8),
-    //                     Type::IntegerType { bits: 16 } => SolutionValue::I16(param_as_u64 as i16),
-    //                     Type::IntegerType { bits: 32 } => SolutionValue::I32(param_as_u64 as i32),
-    //                     Type::IntegerType { bits: 64 } => SolutionValue::I64(param_as_u64 as i64),
-    //                     Type::PointerType { .. } => SolutionValue::Ptr(param_as_u64),
-    //                     ty => unimplemented!("Function parameter with type {:?}", ty),
-    //                 })
-    //             })
-    //             .collect::<Result<_>>()?,
-    //     ))
-    // } else {
-    //     Ok(None)
-    // }
+    let newvals = get_rvals(&mut new_em)?;
+    let oldvals = get_rvals(&mut old_em)?;
+
+    for old_bvalret in &oldvals {
+	if verbose >= 1 {
+	    println!("Solving equivalence for {:?}", old_bvalret);
+	}
+	let found_equivalence = newvals.iter().map(|new_bvalret| {
+	    if verbose >= 2 {
+		println!("  Against {:?}", new_bvalret);
+	    }
+	    match (&old_bvalret, new_bvalret) {
+		(ReturnValue::Return(old_bv), ReturnValue::Return(new_bv)) => {
+		    let old_solutions = get_bvals(oldfn_name, complexity, old_em.state(), old_bv)?;
+		    let new_solutions = get_bvals(newfn_name, complexity, new_em.state(), new_bv)?;
+		    
+		    for old_solution in &old_solutions {
+			for new_solution in &new_solutions {
+			    if old_solution != new_solution {
+				continue;
+			    }println!("{:?}", old_solution);
+			    // return values are the same
+			    // but we've yet to check if they are the same for identical inputs
+			    let old_param_bvs: Vec<_> = old_em.param_bvs().clone();
+			    let new_param_bvs: Vec<_> = new_em.param_bvs().clone();
+			    for old_param_bv in &old_param_bvs {
+				let old_params = get_bvals(oldfn_name, complexity, old_em.state(), &old_param_bv)?;
+				for new_param_bv in &new_param_bvs {
+				    let new_params = get_bvals(newfn_name, complexity, new_em.state(), &new_param_bv)?;
+				    for old_param in &old_params {
+					for new_param in &new_params {
+					    if old_param == new_param {
+						return Ok(true);
+					    }
+					}
+				    }
+				}
+			    }
+			}
+		    }
+		},
+		(ReturnValue::Throw(_old_bv, _), ReturnValue::Throw(_new_bv, _)) => {
+		    todo!("Analyze thrown values");
+		},
+		(ReturnValue::Abort(_), ReturnValue::Abort(_)) => {
+		    todo!("Analyze aborted values");
+		},
+		(_, _) => {
+		    return Ok(false); // this isn't a match
+		}
+	    }
+	    return Ok(false);
+	}).collect::<Result<Vec<_>,anyhow::Error>>()?.into_iter().any(|e| e);
+
+	if !found_equivalence {
+	    return Err(anyhow::Error::msg(format!("Function `{}` isn't equivalent over updates!", newfn_name))); // TODO: more output
+	}
+    }
+
+    Ok(())
 }
 
 fn get_fns_from_bc_files(old_bc: PathBuf, new_bc: PathBuf, verbose: u8) -> anyhow::Result<(Project, Project, Vec<(String, String)>)> {

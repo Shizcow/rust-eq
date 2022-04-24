@@ -1,4 +1,4 @@
-pub fn foo(x: u32) -> u32 {
+pub fn foo(x: u8) -> u8 {
     if x%4 == 0 {
 	return 0;
     } else if x%4 == 1 {
@@ -11,10 +11,11 @@ pub fn foo(x: u32) -> u32 {
 }
 
 pub mod nested {
-    pub fn bar(x: u32) -> u32 {
+    pub fn bar(x: u8) -> u8 {
 	if x == 0 {
-	    return 0;
+	    return 1;
 	}
-	panic!("Other");
+	//panic!("Other");
+	x
     }
 }
