@@ -1,0 +1,12 @@
+.title {
+    font-size: 3em !important;
+}
+.side-by-side > .org-src-container {
+    width: 50%;
+}
+.side-by-side > .org-src-container:nth-child(2) {
+    float: left;
+}
+.side-by-side > .org-src-container:nth-child(3) {
+    float: right;
+}

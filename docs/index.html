@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Quantifying Fault Introductions Across Software Versions</title>
+<meta name="author" content="(Devin Pohl)"/>
+<style type="text/css">
+.underline { text-decoration: underline; }
+</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/dist/reveal.css"/>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js/dist/theme/moon.css" id="theme"/>
+
+<link rel="stylesheet" href="hacks.css"/>
+
+<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+<script>
+    if( window.location.search.match( /print-pdf/gi ) ) {
+        var link = document.createElement( 'link' );
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = 'https://cdn.jsdelivr.net/npm/reveal.js/css/print/pdf.css';
+        document.getElementsByTagName( 'head' )[0].appendChild( link );
+    }
+</script>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+<section id="sec-title-slide"><h1 class="title">Quantifying Fault Introductions Across Software Versions</h1><p class="subtitle">(Tool Development and Research)</p>
+<h2 class="author">Devin Pohl</h2>
+</section>
+
+<section>
+<section id="slide-org139866f" class="side-by-side">
+<h2 id="org139866f">Are these two programs equivalent?</h2>
+<div class="org-src-container">
+
+<pre  class="src src-C++" id="fibb-recursive"  ><code trim><span style="color: #ffd700;">#include</span> <span style="color: #ffffff;">&lt;</span><span style="color: #00fa9a;">stdint.h</span><span style="color: #ffffff;">&gt;</span>
+
+<span style="color: #ff7256;">uint8_t</span> <span style="color: #daa520;">fibbonacci</span><span style="color: #ffffff;">(</span><span style="color: #ff7256;">uint8_t</span> <span style="color: #e7c547;">x</span><span style="color: #ffffff;">)</span> <span style="color: #ffffff;">{</span>
+  <span style="color: #00bfff;">if</span><span style="color: #70c0b1;">(</span>x==0<span style="color: #70c0b1;">)</span>
+    <span style="color: #00bfff;">return</span> 0;
+  <span style="color: #00bfff;">if</span><span style="color: #70c0b1;">(</span>x==1<span style="color: #70c0b1;">)</span>
+    <span style="color: #00bfff;">return</span> 1;
+  <span style="color: #00bfff;">return</span> fibbonacci<span style="color: #70c0b1;">(</span>x-2<span style="color: #70c0b1;">)</span>
+    + fibbonacci<span style="color: #70c0b1;">(</span>x-1<span style="color: #70c0b1;">)</span>;
+<span style="color: #ffffff;">}</span>
+</code></pre>
+</div>
+
+<div class="org-src-container">
+
+<pre  class="src src-C++" id="fibb-iterative"  ><code trim><span style="color: #ffd700;">#include</span> <span style="color: #ffffff;">&lt;</span><span style="color: #00fa9a;">stdint.h</span><span style="color: #ffffff;">&gt;</span>
+
+<span style="color: #ff7256;">uint8_t</span> <span style="color: #daa520;">fibbonacci</span><span style="color: #ffffff;">(</span><span style="color: #ff7256;">uint8_t</span> <span style="color: #e7c547;">x</span><span style="color: #ffffff;">)</span> <span style="color: #ffffff;">{</span>
+  <span style="color: #ff7256;">uint8_t</span> <span style="color: #e7c547;">n2</span>=0, <span style="color: #e7c547;">n1</span>=1;
+  <span style="color: #00bfff;">for</span><span style="color: #70c0b1;">(</span><span style="color: #ff7256;">uint8_t</span> <span style="color: #e7c547;">i</span>=0; i&lt;x; ++i<span style="color: #70c0b1;">)</span> <span style="color: #70c0b1;">{</span>
+    <span style="color: #ff7256;">uint8_t</span> <span style="color: #e7c547;">tmp</span> = n2+n1;
+    n2 = n1;
+    n1 = tmp;
+  <span style="color: #70c0b1;">}</span>
+  <span style="color: #00bfff;">return</span> n2;
+<span style="color: #ffffff;">}</span>
+</code></pre>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-orgf7b3d14">
+<h2 id="orgf7b3d14">Abstract</h2>
+<ul>
+<li>Problem: Updates and fault introductions</li>
+<li>Background: State of the field</li>
+<li>Methodology: Novel implementation of an existing scheme</li>
+<li>Contributions: <code>haybale</code> extensions, <code>rust-eq</code> authoring</li>
+<li>Research: Driven by development, backed by academics</li>
+
+</ul>
+
+</section>
+</section>
+<section>
+<section id="slide-org217b5bf">
+<h2 id="org217b5bf">Problem: Sources of Faults</h2>
+<ul>
+<li>Code revision during software updates</li>
+<li>Incorrect optimizations</li>
+<li>Updated libraries</li>
+<li>Errors in redundancy code</li>
+<li>Failed bugfix</li>
+
+</ul>
+
+</section>
+</section>
+<section>
+<section id="slide-org822781b">
+<h2 id="org822781b">Background: Current Testing</h2>
+<ul>
+<li>Black-box</li>
+<li>"Regression Testing"</li>
+<li>Can't test every input</li>
+<li>Fault detection algorithms (CS 530)</li>
+
+</ul>
+
+</section>
+</section>
+<section>
+<section id="slide-org62ec1c9">
+<h2 id="org62ec1c9">Background: Available Technology</h2>
+<p>
+Program Equivalence
+</p>
+<ul>
+<li>None!</li>
+
+</ul>
+<p>
+Symbolic execution
+</p>
+<ul>
+<li>KLEE (LLVM, standard)</li>
+<li><b>Haybale</b> (LLVM, extensible)</li>
+<li>Seer (Rust, outdated)</li>
+<li>Otter (C, complex)</li>
+<li>PyExZ3 (Python, uncommon to fault-sensitivity)</li>
+
+</ul>
+
+</section>
+</section>
+<section>
+<section id="slide-orgb6f01cd">
+<h2 id="orgb6f01cd">Methodology: Overview</h2>
+<ul>
+<li>Novel implementation of an existing scheme</li>
+<li>Expose a weakness in the field</li>
+<li>Develop a white-box analysis tool</li>
+<li>Use the tool for uncovering challenges in analysis</li>
+<li>Research those challenges</li>
+<li>Call to action for further development</li>
+
+</ul>
+
+</section>
+</section>
+<section>
+<section id="slide-org6a3b57b">
+<h2 id="org6a3b57b">Methodology: Development</h2>
+<ul>
+<li>White-box testing</li>
+<li>Symbolic execution
+<ul>
+<li>You <i>can</i> test every input</li>
+
+</ul></li>
+<li>Symbolic engines exist
+<ul>
+<li>Not specialized, but work for a demo</li>
+
+</ul></li>
+<li>Existing libraries needed modifications</li>
+
+</ul>
+
+</section>
+</section>
+<section>
+<section id="slide-org538c08a">
+<h2 id="org538c08a">Contributions: <code>haybale</code></h2>
+<ul>
+<li>Existing library</li>
+<li>Performs symbolic execution of LLVM bitcode</li>
+<li>Modifications: Tagging crashes with debug info</li>
+<li>Modifications: Tagging handled errors with debug info</li>
+<li>PR submitted to upstream with these modifications</li>
+
+</ul>
+
+</section>
+</section>
+<section>
+<section id="slide-orgaefa24a">
+<h2 id="orgaefa24a">Contributions: <code>rust-eq</code></h2>
+<ul>
+<li>Authored a tool leveraging <code>haybale</code></li>
+<li>Performs back-to-back program equivalence testing</li>
+<li>Input: Two files, with several functions</li>
+<li>Output: A report on equivalence</li>
+<li>Supports Rust and C++</li>
+
+</ul>
+
+</section>
+</section>
+<section>
+<section id="slide-orgea59cde" class="side-by-side">
+<h2 id="orgea59cde">What can it do?</h2>
+<div class="org-src-container">
+
+<pre  class="src src-C++"   ><code trim><span style="color: #ffd700;">#include</span> <span style="color: #ffffff;">&lt;</span><span style="color: #00fa9a;">stdint.h</span><span style="color: #ffffff;">&gt;</span>
+
+<span style="color: #ff7256;">uint8_t</span> <span style="color: #daa520;">fibbonacci</span><span style="color: #ffffff;">(</span><span style="color: #ff7256;">uint8_t</span> <span style="color: #e7c547;">x</span><span style="color: #ffffff;">)</span> <span style="color: #ffffff;">{</span>
+  <span style="color: #00bfff;">if</span><span style="color: #70c0b1;">(</span>x==0<span style="color: #70c0b1;">)</span>
+    <span style="color: #00bfff;">return</span> 0;
+  <span style="color: #00bfff;">if</span><span style="color: #70c0b1;">(</span>x==1<span style="color: #70c0b1;">)</span>
+    <span style="color: #00bfff;">return</span> 1;
+  <span style="color: #00bfff;">return</span> fibbonacci<span style="color: #70c0b1;">(</span>x-2<span style="color: #70c0b1;">)</span>
+    + fibbonacci<span style="color: #70c0b1;">(</span>x-1<span style="color: #70c0b1;">)</span>;
+<span style="color: #ffffff;">}</span>
+</code></pre>
+</div>
+
+<div class="org-src-container">
+
+<pre  class="src src-C++"   ><code trim><span style="color: #ffd700;">#include</span> <span style="color: #ffffff;">&lt;</span><span style="color: #00fa9a;">stdint.h</span><span style="color: #ffffff;">&gt;</span>
+
+<span style="color: #ff7256;">uint8_t</span> <span style="color: #daa520;">fibbonacci</span><span style="color: #ffffff;">(</span><span style="color: #ff7256;">uint8_t</span> <span style="color: #e7c547;">x</span><span style="color: #ffffff;">)</span> <span style="color: #ffffff;">{</span>
+  <span style="color: #ff7256;">uint8_t</span> <span style="color: #e7c547;">n2</span>=0, <span style="color: #e7c547;">n1</span>=1;
+  <span style="color: #00bfff;">for</span><span style="color: #70c0b1;">(</span><span style="color: #ff7256;">uint8_t</span> <span style="color: #e7c547;">i</span>=0; i&lt;x; ++i<span style="color: #70c0b1;">)</span> <span style="color: #70c0b1;">{</span>
+    <span style="color: #ff7256;">uint8_t</span> <span style="color: #e7c547;">tmp</span> = n2+n1;
+    n2 = n1;
+    n1 = tmp;
+  <span style="color: #70c0b1;">}</span>
+  <span style="color: #00bfff;">return</span> n2;
+<span style="color: #ffffff;">}</span>
+</code></pre>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-orgbeb952f" class="side-by-side">
+<h2 id="orgbeb952f">What can it do?</h2>
+<div class="org-src-container">
+
+<pre  class="src src-rust"   ><code trim><span style="color: #00bfff;">fn</span> <span style="color: #daa520;">foo</span><span style="color: #ffffff;">(</span><span style="color: #e7c547;">x</span>: <span style="color: #ff7256;">u8</span><span style="color: #ffffff;">)</span> -&gt; <span style="color: #ff7256;">u8</span> <span style="color: #ffffff;">{</span>
+    <span style="color: #00bfff;">if</span> x%4 == 0 <span style="color: #70c0b1;">{</span>
+        0
+    <span style="color: #70c0b1;">}</span> <span style="color: #00bfff;">else</span> <span style="color: #00bfff;">if</span> x%2 == 0 <span style="color: #70c0b1;">{</span>
+        2
+    <span style="color: #70c0b1;">}</span> <span style="color: #00bfff;">else</span> <span style="color: #00bfff;">if</span> x%4 == 1 <span style="color: #70c0b1;">{</span>
+        1
+    <span style="color: #70c0b1;">}</span> <span style="color: #00bfff;">else</span> <span style="color: #70c0b1;">{</span>
+        3
+    <span style="color: #70c0b1;">}</span>
+<span style="color: #ffffff;">}</span>
+</code></pre>
+</div>
+
+<div class="org-src-container">
+
+<pre  class="src src-rust"   ><code trim><span style="color: #00bfff;">fn</span> <span style="color: #daa520;">foo</span><span style="color: #ffffff;">(</span><span style="color: #e7c547;">x</span>: <span style="color: #ff7256;">u8</span><span style="color: #ffffff;">)</span> -&gt; <span style="color: #ff7256;">u8</span> <span style="color: #ffffff;">{</span>
+    x%4
+<span style="color: #ffffff;">}</span>
+</code></pre>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-orge24b81b" class="side-by-side">
+<h2 id="orge24b81b">What can it do?</h2>
+<div class="org-src-container">
+
+<pre  class="src src-rust"   ><code trim><span style="color: #00bfff;">fn</span> <span style="color: #daa520;">clamp</span><span style="color: #ffffff;">(</span><span style="color: #e7c547;">x</span>: <span style="color: #ff7256;">u8</span>, <span style="color: #e7c547;">y</span>: <span style="color: #ff7256;">u8</span><span style="color: #ffffff;">)</span> -&gt; <span style="color: #ff7256;">u8</span> <span style="color: #ffffff;">{</span>
+    <span style="color: #00bfff;">if</span> x &gt; y <span style="color: #70c0b1;">{</span>
+        y
+    <span style="color: #70c0b1;">}</span> <span style="color: #00bfff;">else</span> <span style="color: #70c0b1;">{</span>
+        x
+    <span style="color: #70c0b1;">}</span>
+<span style="color: #ffffff;">}</span>
+</code></pre>
+</div>
+
+<div class="org-src-container">
+
+<pre  class="src src-c++"   ><code trim><span style="color: #ffd700;">#include</span> <span style="color: #ffffff;">&lt;</span><span style="color: #00fa9a;">stdint.h</span><span style="color: #ffffff;">&gt;</span>
+
+<span style="color: #ff7256;">uint8_t</span> <span style="color: #daa520;">clamp</span><span style="color: #ffffff;">(</span><span style="color: #ff7256;">uint8_t</span> <span style="color: #e7c547;">x</span>,
+              <span style="color: #ff7256;">uint8_t</span> <span style="color: #e7c547;">y</span><span style="color: #ffffff;">)</span> <span style="color: #ffffff;">{</span>
+  <span style="color: #00bfff;">if</span><span style="color: #70c0b1;">(</span>x&gt;y<span style="color: #70c0b1;">)</span> <span style="color: #70c0b1;">{</span>
+    <span style="color: #00bfff;">return</span> y;
+  <span style="color: #70c0b1;">}</span> <span style="color: #00bfff;">else</span> <span style="color: #70c0b1;">{</span>
+    <span style="color: #00bfff;">return</span> x;
+  <span style="color: #70c0b1;">}</span>
+<span style="color: #ffffff;">}</span>
+</code></pre>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-org1ef1f31">
+<h2 id="org1ef1f31">Findings: Error Reporting</h2>
+<pre  class="example" >
+error: Crash behavior is not equivalent
+ --&gt; old.cpp:5:6
+  |
+1 |   int foo(int x) {
+2 |     if(x&lt;10)
+  |        ^^^^----------------------------------------\
+3 |       throw x;                                     |
+  | /-----^^^^^^^ throws in different conditions       |
+ --&gt; new.cpp:5:6                                       |
+  | |                                                  |
+1 | | int foo(int x) {                                 |
+2 | |   if(x&lt;20)                                       |
+  | |      ^^^^----------------------------------------|
+3 | |     throw x;                                     |
+  | \-----^^^^^^^ compared to this                     |
+  = note: Due to different behavior in these branches -/
+  = help: They differ on input values x:[11-20]
+
+error: aborting due to previous error
+</pre>
+
+</section>
+</section>
+<section>
+<section id="slide-org348af2d">
+<h2 id="org348af2d">Findings: Language Quirks</h2>
+<p>
+What does the below function do?
+</p>
+<div class="org-src-container">
+
+<pre  class="src src-rust"   ><code trim><span style="color: #00bfff;">fn</span> <span style="color: #daa520;">foo</span><span style="color: #ffffff;">(</span><span style="color: #e7c547;">x</span>: <span style="color: #ff7256;">u8</span><span style="color: #ffffff;">)</span> -&gt; <span style="color: #ff7256;">u8</span> <span style="color: #ffffff;">{</span>
+    x+1
+<span style="color: #ffffff;">}</span>
+</code></pre>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-org2dea1a9">
+<h2 id="org2dea1a9">Findings: Non-Computable Branches</h2>
+<div class="org-src-container">
+
+<pre  class="src src-rust"   ><code trim><span style="color: #00bfff;">pub</span> <span style="color: #00bfff;">fn</span> <span style="color: #daa520;">foo</span><span style="color: #ffffff;">(</span><span style="color: #e7c547;">x</span>: <span style="color: #ff7256;">u32</span><span style="color: #ffffff;">)</span> -&gt; <span style="color: #ff7256;">u16</span> <span style="color: #ffffff;">{</span>
+    <span style="color: #00bfff;">if</span> x &lt; 100 <span style="color: #70c0b1;">{</span> <span style="color: #FF7177;">// </span><span style="color: #FF7177;">Checks bounds</span>
+        <span style="color: #00bfff;">return</span> x+1; <span style="color: #FF7177;">// </span><span style="color: #FF7177;">shouldn't panic</span>
+    <span style="color: #70c0b1;">}</span> <span style="color: #00bfff;">else</span> <span style="color: #70c0b1;">{</span>
+        <span style="color: #00bfff;">return</span> 0;
+    <span style="color: #70c0b1;">}</span>
+<span style="color: #ffffff;">}</span>
+</code></pre>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-org5d065d7">
+<h2 id="org5d065d7">Findings: Object Preconditions</h2>
+<p>
+Objects need to be constructed and valid
+</p>
+<div class="org-src-container">
+
+<pre  class="src src-rust"   ><code trim><span style="color: #00bfff;">fn</span> <span style="color: #daa520;">fastsum</span><span style="color: #ffffff;">(</span><span style="color: #e7c547;">v</span>: <span style="color: #ff7256;">Vec</span><span style="color: #70c0b1;">&lt;</span><span style="color: #ff7256;">u8</span><span style="color: #70c0b1;">&gt;</span><span style="color: #ffffff;">)</span> -&gt; <span style="color: #ff7256;">u8</span> <span style="color: #ffffff;">{</span>
+    v.iter<span style="color: #70c0b1;">()</span>.fold<span style="color: #70c0b1;">(</span>0, |<span style="color: #e7c547;">sum</span>: <span style="color: #ff7256;">u8</span>, &amp;val| <span style="color: #e7c547;">{</span>
+        sum.overflowing_add<span style="color: #00fa9a;">(</span>val<span style="color: #00fa9a;">)</span>.0
+    <span style="color: #e7c547;">}</span><span style="color: #70c0b1;">)</span>
+<span style="color: #ffffff;">}</span>
+</code></pre>
+</div>
+
+</section>
+</section>
+<section>
+<section id="slide-org5483b13">
+<h2 id="org5483b13">Findings: Multiple Engine Instances</h2>
+<ul>
+<li>Major limitation</li>
+<li><code>boolector</code> cannot solve constraints across multiple execution managers</li>
+<li>Requires additional enumeration / complexity to show equivalence</li>
+<li>Workaround: run both tests in the same program
+<ul>
+<li>Introduces other problems, eg dependency parity</li>
+
+</ul></li>
+
+</ul>
+
+</section>
+</section>
+<section>
+<section id="slide-orge33dd44">
+<h2 id="orge33dd44">Further Work for Report</h2>
+<ul>
+<li>Project nearly done
+<ul>
+<li>Finish supporting C++</li>
+
+</ul></li>
+<li>Research ready for academic side
+<ul>
+<li>Expand on findings</li>
+
+</ul></li>
+
+</ul>
+
+</section>
+</section>
+<section>
+<section id="slide-org9323b9f">
+<h2 id="org9323b9f">Conclusion</h2>
+<ul>
+<li>What is back-to-back testing?</li>
+<li>Contributions</li>
+<li>Novel aspects</li>
+<li>Findings</li>
+
+</ul>
+</section>
+</section>
+</div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js/dist/reveal.js"></script>
+
+<script>
+// Full list of configuration options available here:
+// https://github.com/hakimel/reveal.js#configuration
+Reveal.initialize({
+
+// Optional libraries used to extend on reveal.js
+dependencies: [
+ { src: 'https://cdn.jsdelivr.net/npm/reveal.js/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+ { src: 'https://cdn.jsdelivr.net/npm/reveal.js/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+ { src: 'https://cdn.jsdelivr.net/npm/reveal.js/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+ { src: 'https://cdn.jsdelivr.net/npm/reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }]
+
+});
+
+</script>
+</body>
+</html>

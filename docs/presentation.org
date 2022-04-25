@@ -1,0 +1,267 @@
+#+OPTIONS: num:nil toc:nil todo:nil timestamp:nil ^:nil
+#+REVEAL_TRANS: slide
+#+REVEAL_THEME: moon
+#+REVEAL_ROOT: https://cdn.jsdelivr.net/npm/reveal.js
+#+REVEAL_EXTRA_CSS: hacks.css
+#+Title: Quantifying Fault Introductions Across Software Versions
+#+Subtitle: Tool Development and Research
+#+Author: Devin Pohl
+
+#+EXPORT_FILE_NAME: index.html
+
+#+begin_comment
+Outline:
+- Audience Question
+- Problem
+- Content of the project
+#+end_comment
+
+* DONE Are these two programs equivalent?
+:PROPERTIES:
+:reveal_extra_attr: class="side-by-side"
+:END:
+
+#+name: fibb-recursive
+#+begin_src C++
+#include <stdint.h>
+
+uint8_t fibbonacci(uint8_t x) {
+  if(x==0)
+    return 0;
+  if(x==1)
+    return 1;
+  return fibbonacci(x-2)
+    + fibbonacci(x-1);
+}
+#+end_src
+
+#+name: fibb-iterative
+#+begin_src C++
+#include <stdint.h>
+
+uint8_t fibbonacci(uint8_t x) {
+  uint8_t n2=0, n1=1;
+  for(uint8_t i=0; i<x; ++i) {
+    uint8_t tmp = n2+n1;
+    n2 = n1;
+    n1 = tmp;
+  }
+  return n2;
+}
+#+end_src
+
+* DONE Abstract
+- Problem: Updates and fault introductions
+- Background: State of the field
+- Methodology: Novel implementation of an existing scheme
+- Contributions: =haybale= extensions, =rust-eq= authoring
+- Research: Driven by development, backed by academics
+
+* DONE Problem: Sources of Faults
+- Code revision during software updates
+- Incorrect optimizations
+- Updated libraries
+- Errors in redundancy code
+- Failed bugfix
+
+* DONE Background: Current Testing
+- Black-box
+- "Regression Testing"
+- Can't test every input
+- Fault detection algorithms (CS 530)
+
+* DONE Background: Available Technology
+Program Equivalence
+- None!
+Symbolic execution
+- KLEE (LLVM, standard)
+- *Haybale* (LLVM, extensible)
+- Seer (Rust, outdated)
+- Otter (C, complex)
+- PyExZ3 (Python, uncommon to fault-sensitivity)
+
+* DONE Methodology: Overview
+- Novel implementation of an existing scheme
+- Expose a weakness in the field
+- Develop a white-box analysis tool
+- Use the tool for uncovering challenges in analysis
+- Research those challenges
+- Call to action for further development
+
+* DONE Methodology: Development
+- White-box testing
+- Symbolic execution
+  - You /can/ test every input
+- Symbolic engines exist
+  - Not specialized, but work for a demo
+- Existing libraries needed modifications
+
+* DONE Contributions: =haybale=
+- Existing library
+- Performs symbolic execution of LLVM bitcode
+- Modifications: Tagging crashes with debug info
+- Modifications: Tagging handled errors with debug info
+- PR submitted to upstream with these modifications
+
+* DONE Contributions: =rust-eq=
+- Authored a tool leveraging =haybale=
+- Performs back-to-back program equivalence testing
+- Input: Two files, with several functions
+- Output: A report on equivalence
+- Supports Rust and C++
+
+* DONE What can it do?
+:PROPERTIES:
+:reveal_extra_attr: class="side-by-side"
+:END:
+
+#+begin_src C++
+#include <stdint.h>
+
+uint8_t fibbonacci(uint8_t x) {
+  if(x==0)
+    return 0;
+  if(x==1)
+    return 1;
+  return fibbonacci(x-2)
+    + fibbonacci(x-1);
+}
+#+end_src
+
+#+begin_src C++
+#include <stdint.h>
+
+uint8_t fibbonacci(uint8_t x) {
+  uint8_t n2=0, n1=1;
+  for(uint8_t i=0; i<x; ++i) {
+    uint8_t tmp = n2+n1;
+    n2 = n1;
+    n1 = tmp;
+  }
+  return n2;
+}
+#+end_src
+
+* DONE What can it do?
+:PROPERTIES:
+:reveal_extra_attr: class="side-by-side"
+:END:
+
+#+begin_src rust
+fn foo(x: u8) -> u8 {
+    if x%4 == 0 {
+	0
+    } else if x%2 == 0 {
+	2
+    } else if x%4 == 1 {
+	1
+    } else {
+	3
+    }
+}
+#+end_src
+
+#+begin_src rust
+fn foo(x: u8) -> u8 {
+    x%4
+}
+#+end_src
+
+* DONE What can it do?
+:PROPERTIES:
+:reveal_extra_attr: class="side-by-side"
+:END:
+
+#+begin_src rust
+fn clamp(x: u8, y: u8) -> u8 {
+    if x > y {
+	y
+    } else {
+	x
+    }
+}
+#+end_src
+
+#+begin_src c++
+#include <stdint.h>
+
+uint8_t clamp(uint8_t x,
+	      uint8_t y) {
+  if(x>y) {
+    return y;
+  } else {
+    return x;
+  }
+}
+#+end_src
+
+* DONE Findings: Error Reporting
+#+begin_src
+error: Crash behavior is not equivalent
+ --> old.cpp:5:6
+  |
+1 |   int foo(int x) {
+2 |     if(x<10)
+  |        ^^^^----------------------------------------\
+3 |       throw x;                                     |
+  | /-----^^^^^^^ throws in different conditions       |
+ --> new.cpp:5:6                                       |
+  | |                                                  |
+1 | | int foo(int x) {                                 |
+2 | |   if(x<20)                                       |
+  | |      ^^^^----------------------------------------|
+3 | |     throw x;                                     |
+  | \-----^^^^^^^ compared to this                     |
+  = note: Due to different behavior in these branches -/
+  = help: They differ on input values x:[11-20]
+
+error: aborting due to previous error
+#+end_src
+
+* DONE Findings: Language Quirks
+What does the below function do?
+#+begin_src rust
+fn foo(x: u8) -> u8 {
+    x+1
+}
+#+end_src
+
+* DONE Findings: Non-Computable Branches
+#+begin_src rust
+pub fn foo(x: u32) -> u16 {
+    if x < 100 { // Checks bounds
+        return x+1; // shouldn't panic
+    } else {
+        return 0;
+    }
+}
+#+end_src
+
+* DONE Findings: Object Preconditions
+Objects need to be constructed and valid
+#+begin_src rust
+fn fastsum(v: Vec<u8>) -> u8 {
+    v.iter().fold(0, |sum: u8, &val| {
+	sum.overflowing_add(val).0
+    })
+}
+#+end_src
+
+* DONE Findings: Multiple Engine Instances
+- Major limitation
+- =boolector= cannot solve constraints across multiple execution managers
+- Requires additional enumeration / complexity to show equivalence
+- Workaround: run both tests in the same program
+  - Introduces other problems, eg dependency parity
+
+* DONE Further Work for Report
+- Project nearly done
+  - Finish supporting C++
+- Research ready for academic side
+  - Expand on findings
+
+* DONE Conclusion
+- What is back-to-back testing?
+- Contributions
+- Novel aspects
+- Findings
