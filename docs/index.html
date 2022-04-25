@@ -32,8 +32,8 @@
 </section>
 
 <section>
-<section id="slide-org139866f" class="side-by-side">
-<h2 id="org139866f">Are these two programs equivalent?</h2>
+<section id="slide-orgb476878" class="side-by-side">
+<h2 id="orgb476878">Are these two programs equivalent?</h2>
 <div class="org-src-container">
 
 <pre  class="src src-C++" id="fibb-recursive"  ><code trim><span style="color: #ffd700;">#include</span> <span style="color: #ffffff;">&lt;</span><span style="color: #00fa9a;">stdint.h</span><span style="color: #ffffff;">&gt;</span>
@@ -68,8 +68,8 @@
 </section>
 </section>
 <section>
-<section id="slide-orgf7b3d14">
-<h2 id="orgf7b3d14">Abstract</h2>
+<section id="slide-orgc890c12">
+<h2 id="orgc890c12">Abstract</h2>
 <ul>
 <li>Problem: Updates and fault introductions</li>
 <li>Background: State of the field</li>
@@ -82,8 +82,8 @@
 </section>
 </section>
 <section>
-<section id="slide-org217b5bf">
-<h2 id="org217b5bf">Problem: Sources of Faults</h2>
+<section id="slide-org29b7374">
+<h2 id="org29b7374">Problem: Sources of Faults</h2>
 <ul>
 <li>Code revision during software updates</li>
 <li>Incorrect optimizations</li>
@@ -96,8 +96,8 @@
 </section>
 </section>
 <section>
-<section id="slide-org822781b">
-<h2 id="org822781b">Background: Current Testing</h2>
+<section id="slide-org6a6ddc8">
+<h2 id="org6a6ddc8">Background: Current Testing</h2>
 <ul>
 <li>Black-box</li>
 <li>"Regression Testing"</li>
@@ -109,8 +109,8 @@
 </section>
 </section>
 <section>
-<section id="slide-org62ec1c9">
-<h2 id="org62ec1c9">Background: Available Technology</h2>
+<section id="slide-orgc362086">
+<h2 id="orgc362086">Background: Available Technology</h2>
 <p>
 Program Equivalence
 </p>
@@ -133,8 +133,8 @@ Symbolic execution
 </section>
 </section>
 <section>
-<section id="slide-orgb6f01cd">
-<h2 id="orgb6f01cd">Methodology: Overview</h2>
+<section id="slide-org4d310e0">
+<h2 id="org4d310e0">Methodology: Overview</h2>
 <ul>
 <li>Novel implementation of an existing scheme</li>
 <li>Expose a weakness in the field</li>
@@ -148,8 +148,8 @@ Symbolic execution
 </section>
 </section>
 <section>
-<section id="slide-org6a3b57b">
-<h2 id="org6a3b57b">Methodology: Development</h2>
+<section id="slide-org11f5550">
+<h2 id="org11f5550">Methodology: Development</h2>
 <ul>
 <li>White-box testing</li>
 <li>Symbolic execution
@@ -169,8 +169,8 @@ Symbolic execution
 </section>
 </section>
 <section>
-<section id="slide-org538c08a">
-<h2 id="org538c08a">Contributions: <code>haybale</code></h2>
+<section id="slide-org7332588">
+<h2 id="org7332588">Contributions: <code>haybale</code></h2>
 <ul>
 <li>Existing library</li>
 <li>Performs symbolic execution of LLVM bitcode</li>
@@ -183,8 +183,8 @@ Symbolic execution
 </section>
 </section>
 <section>
-<section id="slide-orgaefa24a">
-<h2 id="orgaefa24a">Contributions: <code>rust-eq</code></h2>
+<section id="slide-org51a5bdf">
+<h2 id="org51a5bdf">Contributions: <code>rust-eq</code></h2>
 <ul>
 <li>Authored a tool leveraging <code>haybale</code></li>
 <li>Performs back-to-back program equivalence testing</li>
@@ -197,8 +197,8 @@ Symbolic execution
 </section>
 </section>
 <section>
-<section id="slide-orgea59cde" class="side-by-side">
-<h2 id="orgea59cde">What can it do?</h2>
+<section id="slide-org95180be" class="side-by-side">
+<h2 id="org95180be">What can it do?</h2>
 <div class="org-src-container">
 
 <pre  class="src src-C++"   ><code trim><span style="color: #ffd700;">#include</span> <span style="color: #ffffff;">&lt;</span><span style="color: #00fa9a;">stdint.h</span><span style="color: #ffffff;">&gt;</span>
@@ -233,8 +233,8 @@ Symbolic execution
 </section>
 </section>
 <section>
-<section id="slide-orgbeb952f" class="side-by-side">
-<h2 id="orgbeb952f">What can it do?</h2>
+<section id="slide-org30deebc" class="side-by-side">
+<h2 id="org30deebc">What can it do?</h2>
 <div class="org-src-container">
 
 <pre  class="src src-rust"   ><code trim><span style="color: #00bfff;">fn</span> <span style="color: #daa520;">foo</span><span style="color: #ffffff;">(</span><span style="color: #e7c547;">x</span>: <span style="color: #ff7256;">u8</span><span style="color: #ffffff;">)</span> -&gt; <span style="color: #ff7256;">u8</span> <span style="color: #ffffff;">{</span>
@@ -262,8 +262,8 @@ Symbolic execution
 </section>
 </section>
 <section>
-<section id="slide-orge24b81b" class="side-by-side">
-<h2 id="orge24b81b">What can it do?</h2>
+<section id="slide-org907b65b" class="side-by-side">
+<h2 id="org907b65b">What can it do?</h2>
 <div class="org-src-container">
 
 <pre  class="src src-rust"   ><code trim><span style="color: #00bfff;">fn</span> <span style="color: #daa520;">clamp</span><span style="color: #ffffff;">(</span><span style="color: #e7c547;">x</span>: <span style="color: #ff7256;">u8</span>, <span style="color: #e7c547;">y</span>: <span style="color: #ff7256;">u8</span><span style="color: #ffffff;">)</span> -&gt; <span style="color: #ff7256;">u8</span> <span style="color: #ffffff;">{</span>
@@ -294,8 +294,8 @@ Symbolic execution
 </section>
 </section>
 <section>
-<section id="slide-org1ef1f31">
-<h2 id="org1ef1f31">Findings: Error Reporting</h2>
+<section id="slide-org59fb87c">
+<h2 id="org59fb87c">Findings: Error Reporting</h2>
 <pre  class="example" >
 error: Crash behavior is not equivalent
  --&gt; old.cpp:5:6
@@ -321,8 +321,8 @@ error: aborting due to previous error
 </section>
 </section>
 <section>
-<section id="slide-org348af2d">
-<h2 id="org348af2d">Findings: Language Quirks</h2>
+<section id="slide-orgfc27dd4">
+<h2 id="orgfc27dd4">Findings: Language Quirks</h2>
 <p>
 What does the below function do?
 </p>
@@ -337,8 +337,8 @@ What does the below function do?
 </section>
 </section>
 <section>
-<section id="slide-org2dea1a9">
-<h2 id="org2dea1a9">Findings: Non-Computable Branches</h2>
+<section id="slide-org25ca305">
+<h2 id="org25ca305">Findings: Non-Computable Branches</h2>
 <div class="org-src-container">
 
 <pre  class="src src-rust"   ><code trim><span style="color: #00bfff;">pub</span> <span style="color: #00bfff;">fn</span> <span style="color: #daa520;">foo</span><span style="color: #ffffff;">(</span><span style="color: #e7c547;">x</span>: <span style="color: #ff7256;">u32</span><span style="color: #ffffff;">)</span> -&gt; <span style="color: #ff7256;">u16</span> <span style="color: #ffffff;">{</span>
@@ -354,8 +354,8 @@ What does the below function do?
 </section>
 </section>
 <section>
-<section id="slide-org5d065d7">
-<h2 id="org5d065d7">Findings: Object Preconditions</h2>
+<section id="slide-orgd1a7a44">
+<h2 id="orgd1a7a44">Findings: Object Preconditions</h2>
 <p>
 Objects need to be constructed and valid
 </p>
@@ -372,8 +372,8 @@ Objects need to be constructed and valid
 </section>
 </section>
 <section>
-<section id="slide-org5483b13">
-<h2 id="org5483b13">Findings: Multiple Engine Instances</h2>
+<section id="slide-orgda5be88">
+<h2 id="orgda5be88">Findings: Multiple Engine Instances</h2>
 <ul>
 <li>Major limitation</li>
 <li><code>boolector</code> cannot solve constraints across multiple execution managers</li>
@@ -389,8 +389,8 @@ Objects need to be constructed and valid
 </section>
 </section>
 <section>
-<section id="slide-orge33dd44">
-<h2 id="orge33dd44">Further Work for Report</h2>
+<section id="slide-org613c914">
+<h2 id="org613c914">Further Work for Report</h2>
 <ul>
 <li>Project nearly done
 <ul>
@@ -408,8 +408,8 @@ Objects need to be constructed and valid
 </section>
 </section>
 <section>
-<section id="slide-org9323b9f">
-<h2 id="org9323b9f">Conclusion</h2>
+<section id="slide-org9458f22">
+<h2 id="org9458f22">Conclusion</h2>
 <ul>
 <li>What is back-to-back testing?</li>
 <li>Contributions</li>
@@ -417,6 +417,19 @@ Objects need to be constructed and valid
 <li>Findings</li>
 
 </ul>
+
+</section>
+</section>
+<section>
+<section id="slide-org5bc5253">
+<h2 id="org5bc5253">References</h2>
+<p>
+[1] M. Vouk, “Back-to-back testing,” Information and Software Technology, vol. 32, no. 1, pp. 34–45, 1990. [Online]. Available: <a href="http://dx.doi.org/10.1016/0950-5849(90)90044-R">http://dx.doi.org/10.1016/0950-5849(90)90044-R</a>
+</p>
+
+<p>
+[2] D. Pohl, “rust-eq,” 2022. [Online]. Available: <a href="https://github.com/Shizcow/rust-eq">https://github.com/Shizcow/rust-eq</a>
+</p>
 </section>
 </section>
 </div>

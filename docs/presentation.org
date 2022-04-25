@@ -9,6 +9,8 @@
 
 #+EXPORT_FILE_NAME: index.html
 
+#+startup: content
+
 #+begin_comment
 Outline:
 - Audience Question
@@ -265,3 +267,8 @@ fn fastsum(v: Vec<u8>) -> u8 {
 - Contributions
 - Novel aspects
 - Findings
+
+* References
+[1] M. Vouk, “Back-to-back testing,” Information and Software Technology, vol. 32, no. 1, pp. 34–45, 1990. [Online]. Available: http://dx.doi.org/10.1016/0950-5849(90)90044-R
+
+[2] D. Pohl, “rust-eq,” 2022. [Online]. Available: https://github.com/Shizcow/rust-eq
