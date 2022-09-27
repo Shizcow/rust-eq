@@ -6,7 +6,10 @@ To run the project, just clone and `cargo run`. This will display a help message
 
 This program reads two files, then looks at all functions inside of them. It will cross-reference all of the function with common names (eg `foo()` and `bar::baz()`) for testing. Testing is done via symbolic execution.
 
-* Docs
-In the `docs` directory are a few items. They include:
-1. An IEEE formatted paper on the topic of "Quantifying Fault Introductions Across Software Versions" using this project
-2. An org-reveal presentation on this project. You can view it in your browser at https://pohldev.in/rust-eq/
+## Paper
+
+In the root directory of this project is an IEEE formatted paper on the topic of "Quantifying Fault Introductions Across Software Versions". It uses this project to show how program equivalence testing could be beneficial for cross-version testing.
+
+## Presentation
+
+An org-reveal presentation on this project lives in the `docs` directory. You can view it in your browser at https://pohldev.in/rust-eq/.
